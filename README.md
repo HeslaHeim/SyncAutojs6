@@ -1,6 +1,6 @@
 ### SyncClipboard Android 自动同步脚本  
 
-此脚本由 SyncClipboard 项目 script 目录下的 SyncAutoxJs.js 文件衍生而来
+此脚本由 SyncClipboard 项目 script 目录下的 SyncAutoxJs.js 文件衍生而来  
 已实现无感同步剪贴板、文件、截图、通知等功能，支持 Android 16 等系统，安装 AutoJs6 后使用，无需 Root 权限
 
 功能说明：
