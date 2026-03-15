@@ -1,9 +1,9 @@
 /**
- * SyncClipboard Android 自动同步脚本 v3.1.1-2026.02.23 (SyncAutojs6.js)
+ * SyncClipboard Android 自动同步脚本 v3.1.1-2026.03.15 (SyncAutojs6.js)
  * Copyright (c) 2026 CGQA (https://github.com/imgs/SyncAutojs6). MIT License.
  * 
  * 此脚本由 SyncClipboard 项目 script 目录下的 SyncAutoxJs.js 文件衍生而来
- * 已实现无感同步剪贴板、文件、截图、通知等功能，支持 Android 16 等系统，需配合 Shizuku 和 AutoJs6 使用，无需 Root 权限
+ * 已实现无感同步剪贴板、文件、截图、通知等功能，支持 Android 16 等系统，安装 AutoJs6 后使用，无需 Root 权限
  *
  * 功能说明：
  * 1. 剪贴板文本同步 - 自动上传/下载文本剪贴板，与 SyncClipboard 服务器保持同步
@@ -11,7 +11,8 @@
  * 3. 截图上传 - 监控截图目录，新截图自动上传（可关闭 enableScreenshotUpload）
  * 4. 通知上传 - 支持自定义通知上传白名单，例如将微信/短信等通知内容自动上传为剪贴板（可关闭 notificationUploadDefaultOn）
  * 5. 剪贴板文件同步 - 监听剪贴板，检测到复制文件和 content URI 时自动上传（可关闭 enableClipboardFileSync）
- *
+ * 6. Group 上传 - Upload 目录下的子文件夹会打包为 zip 并作为 Group 上传（可关闭 enableGroupUpload）
+ * 
  * 设计说明：
  * - 适配 SyncClipboard v3.x API，遵循 Hash.md 以 hash 作为内容唯一标识
  * - 截图上传前等待元数据稳定，避免系统修改文件导致重复上传
@@ -19,10 +20,11 @@
  * - 上传过的内容（hash）永久记录，避免重复上传及误下载
  *
  * 使用说明：
- * 1. 安装 Shizuku（https://github.com/RikkaApps/Shizuku）和 AutoJs6（https://github.com/SuperMonster003/AutoJs6），并对AutoJs6授权和开启所有文件访问权限、剪贴板、悬浮窗、自启动、电池优化不受限等权限
+ * 1. 安装 AutoJs6（https://github.com/SuperMonster003/AutoJs6），并对AutoJs6授权和开启所有文件访问权限、剪贴板、悬浮窗、自启动、电池优化不受限等权限
  * 2. 在 AutoJs6 中安装本脚本，并配置 User Config
  * 3. 运行脚本，即可实现无感同步剪贴板、文件、截图、通知等功能
  * 4. 需要搭配 SyncClipboard 服务器使用，服务器搭建请参考 SyncClipboard 项目 README.md
+ * 5. 息屏同步可能需要用到改版 Shizuku（https://github.com/thedjchi/Shizuku），如有root权限可尝试原版 Shizuku（https://github.com/RikkaApps/Shizuku），请自行安装测试
  * 
  * 测试环境：
  * Android 16（小米 HyperOS 3.0）和 HarmonyOS 3.0（华为平板）系统中测试正常，其他设备/系统未测试
@@ -30,9 +32,6 @@
  * 特别感谢：
  * SyncClipboard 作者：Jeric-X，项目采用 MIT License
  * 项目地址：https://github.com/Jeric-X/SyncClipboard
- * 
- * Shizuku 作者：RikkaApps，项目采用 Apache-2.0 License
- * 项目地址：https://github.com/RikkaApps/Shizuku
  * 
  * AutoJs6 作者：SuperMonster003，项目采用 MPL-2.0 License
  * 项目地址：https://github.com/SuperMonster003/AutoJs6
@@ -49,7 +48,7 @@ const toastLang = 'zh'  // 'zh' 中文 | 'en' English
 const syncWhenScreenOff = false  // true: 熄屏也同步 | false: 仅亮屏时同步
 const notificationUploadDefaultOn = true // 通知上传默认开启
 const notificationPackageWhitelist = [
-    'com.tencent.mm',                    // WeChat
+    // 'com.tencent.mm',                    // WeChat
     'com.android.mms',                   // 短信
     'com.google.android.apps.messaging', // Google Messages
 ] // 通知上传白名单，默认包含 WeChat、短信、Google Messages
@@ -70,7 +69,8 @@ const screenshotDirs = [
 const enableGroupUpload = true // Group 上传：Upload 目录下的子文件夹会打包为 zip 并作为 Group 上传
 // END User Config
 
-const axios = require('axios');
+// 使用不同变量名避免 redeclaration 错误
+const axiosClient = require('axios');
 
 const authHeader = 'Basic ' + $base64.encode(`${username}:${token}`)
 
@@ -301,7 +301,7 @@ function loop() {
 }
 
 function download() {
-    return axios({
+    return axiosClient({
         method: 'get',
         url: apiUrl,
         responseType: 'json',
@@ -490,7 +490,7 @@ function upload() {
     if (text == null || text.length === 0) return Promise.resolve(true)
     if (lastUploadedClipboardFile && (text === lastUploadedClipboardFile || text === 'file://' + lastUploadedClipboardFile)) return Promise.resolve(true)
     if (text != remoteCache && text != lastUploadedClipboard) {
-        return axios({
+        return axiosClient({
             method: 'put',
             url: apiUrl,
             headers: {
@@ -760,7 +760,7 @@ function uploadGroupItem(dirName, dirPath, zipName, zipBytes, groupHash) {
         lastUploadedFileHashSet.add(ghUpper)
     }
     lastUploadedClipboardFile = dirPath
-    return axios({ method: 'get', url: apiUrl, headers: { 'authorization': authHeader }, responseType: 'json' })
+    return axiosClient({ method: 'get', url: apiUrl, headers: { 'authorization': authHeader }, responseType: 'json' })
         .then(function(res) {
             if (res.status >= 200 && res.status < 300 && res.data) {
                 var p = res.data
@@ -823,7 +823,7 @@ function uploadFileItem(name, fullPath, mtime, opts) {
         }
         // 按 SyncClipboard 设计：hash 为内容唯一标识，已上传内容不再清除
         var encodedName = encodeURIComponent(name)
-        return axios({ method: 'get', url: apiUrl, headers: { 'authorization': authHeader }, responseType: 'json' })
+        return axiosClient({ method: 'get', url: apiUrl, headers: { 'authorization': authHeader }, responseType: 'json' })
             .then(function(res) {
                 if (res.status >= 200 && res.status < 300 && res.data) {
                     var p = res.data
@@ -915,7 +915,7 @@ function doUploadFile(name, fullPath, mtime, bytes, fileHash, encodedName, profi
                 } catch (e) {}
             }
             
-            return axios({
+            return axiosClient({
                 method: 'put',
                 url: apiUrl,
                 headers: { 'Authorization': authHeader, 'Content-Type': 'application/json' },
@@ -996,7 +996,7 @@ function downloadFile(fileName, expectedHash, isGroup) {
 
 function uploadNotificationContent(text) {
 	if (text != null && text.length != 0) {
-		return axios({
+		return axiosClient({
 			method: 'put',
 			url: apiUrl,
 			headers: {
