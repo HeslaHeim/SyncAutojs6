@@ -39,7 +39,7 @@
  */
 
 // START User Config
-const url = 'https://192.168.1.5:5033' // 服务器地址，默认 https://192.168.1.5:5033
+const url = 'https://192.168.1.5:5033' // 服务器地址，示例：https://192.168.1.5:5033
 const username = 'admin' // 用户名，默认 admin
 const token = 'admin' // 令牌，默认 admin
 const intervalTime = 3 * 1000                           // 自动同步间隔时间，默认 3 秒
